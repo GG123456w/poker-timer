@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTimer } from '../contexts/TimerContext';
-import { Maximize, Minimize, ArrowLeft } from 'lucide-react';
+import { Maximize, Minimize, ArrowLeft, LogOut, User } from 'lucide-react';
+import { logout, getSession } from '../utils/auth';
 
 const formatTime = (s: number): string => {
   const m = Math.floor(s / 60);
@@ -16,6 +17,7 @@ const AdminPage: React.FC = () => {
   const nextLevel = levels[currentLevelIndex + 1];
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
+  const [session, setSession] = useState(() => getSession());
   const [localConfig, setLocalConfig] = useState({
     startSB: 100,
     startBB: 200,
@@ -29,6 +31,14 @@ const AdminPage: React.FC = () => {
     document.addEventListener('fullscreenchange', onFs);
     return () => document.removeEventListener('fullscreenchange', onFs);
   }, []);
+
+  const handleLogout = () => {
+    if (confirm('确定要退出登录吗？')) {
+      logout();
+      window.location.hash = '#/admin';  // 触发 hashchange 跳转到 LoginPage
+      window.location.reload();
+    }
+  };
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) document.documentElement.requestFullscreen();
@@ -69,13 +79,26 @@ const AdminPage: React.FC = () => {
     <div className="min-h-screen w-full text-white" style={{ background: 'linear-gradient(180deg, #1a1410 0%, #050302 100%)' }}>
       {/* 顶部 */}
       <div className="flex items-center justify-between p-4 border-b border-white/10">
-        <button onClick={() => window.location.hash = '/'} className="flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/20 rounded text-sm">
-          <ArrowLeft size={16} /> 返回投屏
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => window.location.hash = '/'} className="flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/20 rounded text-sm">
+            <ArrowLeft size={16} /> 返回投屏
+          </button>
+          {session && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded text-sm">
+              <User size={14} className="text-amber-500" />
+              <span className="text-amber-500 font-medium">{session.username}</span>
+            </div>
+          )}
+        </div>
         <h1 className="text-xl font-bold tracking-wider" style={{ color: '#c5a572' }}>本地管理后台</h1>
-        <button onClick={toggleFullscreen} className="flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/20 rounded text-sm">
-          {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />} {isFullscreen ? '退出全屏' : '全屏'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={handleLogout} className="flex items-center gap-2 px-3 py-1.5 bg-red-900/30 border border-red-700/50 hover:bg-red-900/50 rounded text-sm">
+            <LogOut size={16} /> 退出登录
+          </button>
+          <button onClick={toggleFullscreen} className="flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/20 rounded text-sm">
+            {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />} {isFullscreen ? '退出全屏' : '全屏'}
+          </button>
+        </div>
       </div>
 
       <div className="p-6 max-w-4xl mx-auto space-y-6">
