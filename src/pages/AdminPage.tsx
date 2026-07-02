@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useTimer } from '../contexts/TimerContext';
-import { Maximize, Minimize, ArrowLeft, LogOut, User } from 'lucide-react';
-import { logout, getSession } from '../utils/auth';
-import { cloudLogout } from '../utils/cloudSync';
+import { Maximize, Minimize, ArrowLeft, LogOut, User, KeyRound, X, Eye, EyeOff } from 'lucide-react';
+import { logout, getSession, changePassword } from '../utils/auth';
+import { cloudLogout, cloudChangePassword, isCloudEnabled } from '../utils/cloudSync';
 
 const formatTime = (s: number): string => {
   const m = Math.floor(s / 60);
@@ -19,6 +19,15 @@ const AdminPage: React.FC = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
   const [session] = useState(() => getSession());
+  const [showChangePwd, setShowChangePwd] = useState(false);
+  const [oldPwd, setOldPwd] = useState('');
+  const [newPwd, setNewPwd] = useState('');
+  const [newPwd2, setNewPwd2] = useState('');
+  const [showOldPwd, setShowOldPwd] = useState(false);
+  const [showNewPwd, setShowNewPwd] = useState(false);
+  const [pwdError, setPwdError] = useState('');
+  const [pwdSuccess, setPwdSuccess] = useState('');
+  const [pwdLoading, setPwdLoading] = useState(false);
   const [localConfig, setLocalConfig] = useState({
     startSB: 100,
     startBB: 200,
@@ -39,6 +48,53 @@ const AdminPage: React.FC = () => {
       logout();        // 清本地 session
       window.location.hash = '#/admin';  // 触发 hashchange 跳转到 LoginPage
       window.location.reload();
+    }
+  };
+
+  const openChangePwd = () => {
+    setOldPwd(''); setNewPwd(''); setNewPwd2('');
+    setPwdError(''); setPwdSuccess('');
+    setShowChangePwd(true);
+  };
+
+  const closeChangePwd = () => {
+    setShowChangePwd(false);
+    setPwdError(''); setPwdSuccess('');
+  };
+
+  const submitChangePwd = async () => {
+    setPwdError(''); setPwdSuccess('');
+    if (!oldPwd || !newPwd || !newPwd2) {
+      setPwdError('请填写完整');
+      return;
+    }
+    if (newPwd !== newPwd2) {
+      setPwdError('两次输入的新密码不一致');
+      return;
+    }
+    if (newPwd.length < 6) {
+      setPwdError('新密码至少 6 位');
+      return;
+    }
+    setPwdLoading(true);
+    try {
+      if (isCloudEnabled()) {
+        await cloudChangePassword(oldPwd, newPwd);
+      } else {
+        const r = changePassword(oldPwd, newPwd);
+        if (!r.ok) throw new Error(r.error || '修改失败');
+      }
+      setPwdSuccess('密码修改成功！请使用新密码重新登录。');
+      setTimeout(() => {
+        cloudLogout();
+        logout();
+        window.location.hash = '#/admin';
+        window.location.reload();
+      }, 1500);
+    } catch (e: any) {
+      setPwdError(e.message || '修改失败');
+    } finally {
+      setPwdLoading(false);
     }
   };
 
@@ -94,6 +150,9 @@ const AdminPage: React.FC = () => {
         </div>
         <h1 className="text-xl font-bold tracking-wider" style={{ color: '#c5a572' }}>本地管理后台</h1>
         <div className="flex items-center gap-2">
+          <button onClick={openChangePwd} className="flex items-center gap-2 px-3 py-1.5 bg-amber-900/30 border border-amber-700/50 hover:bg-amber-900/50 rounded text-sm">
+            <KeyRound size={16} /> 修改密码
+          </button>
           <button onClick={handleLogout} className="flex items-center gap-2 px-3 py-1.5 bg-red-900/30 border border-red-700/50 hover:bg-red-900/50 rounded text-sm">
             <LogOut size={16} /> 退出登录
           </button>
@@ -215,6 +274,124 @@ const AdminPage: React.FC = () => {
           💡 提示：投屏电脑浏览器打开 [http://localhost:5173/](http://localhost:5173/) 投屏，本页面（[#/admin](http://localhost:5173/#/admin)）作为本地控制后台。两者自动实时同步。
         </div>
       </div>
+
+      {/* 修改密码模态框 */}
+      {showChangePwd && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
+          onClick={closeChangePwd}
+        >
+          <div
+            className="bg-gray-900 border border-amber-700/50 rounded-2xl shadow-2xl w-full max-w-md p-6 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={closeChangePwd}
+              className="absolute top-3 right-3 text-gray-400 hover:text-white p-1"
+            >
+              <X size={20} />
+            </button>
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                <KeyRound className="w-5 h-5 text-amber-500" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">修改管理员密码</h2>
+                <p className="text-xs text-gray-400 mt-0.5">修改后需重新登录</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {/* 旧密码 */}
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-1.5">旧密码</label>
+                <div className="relative">
+                  <input
+                    type={showOldPwd ? 'text' : 'password'}
+                    value={oldPwd}
+                    onChange={(e) => setOldPwd(e.target.value)}
+                    placeholder="请输入当前密码"
+                    className="w-full px-3 py-2.5 pr-10 bg-gray-800 text-white rounded-lg border border-gray-700 focus:border-amber-500 focus:outline-none transition-all"
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowOldPwd(!showOldPwd)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-amber-500"
+                  >
+                    {showOldPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* 新密码 */}
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-1.5">新密码（至少 6 位）</label>
+                <div className="relative">
+                  <input
+                    type={showNewPwd ? 'text' : 'password'}
+                    value={newPwd}
+                    onChange={(e) => setNewPwd(e.target.value)}
+                    placeholder="请输入新密码"
+                    className="w-full px-3 py-2.5 pr-10 bg-gray-800 text-white rounded-lg border border-gray-700 focus:border-amber-500 focus:outline-none transition-all"
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPwd(!showNewPwd)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-amber-500"
+                  >
+                    {showNewPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* 确认新密码 */}
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-1.5">确认新密码</label>
+                <input
+                  type={showNewPwd ? 'text' : 'password'}
+                  value={newPwd2}
+                  onChange={(e) => setNewPwd2(e.target.value)}
+                  placeholder="再次输入新密码"
+                  className="w-full px-3 py-2.5 bg-gray-800 text-white rounded-lg border border-gray-700 focus:border-amber-500 focus:outline-none transition-all"
+                  autoComplete="new-password"
+                />
+              </div>
+
+              {/* 错误 / 成功提示 */}
+              {pwdError && (
+                <div className="bg-red-500/10 border border-red-500/50 rounded-lg px-3 py-2 text-red-400 text-sm text-center">
+                  {pwdError}
+                </div>
+              )}
+              {pwdSuccess && (
+                <div className="bg-green-500/10 border border-green-500/50 rounded-lg px-3 py-2 text-green-400 text-sm text-center">
+                  {pwdSuccess}
+                </div>
+              )}
+
+              {/* 按钮 */}
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={closeChangePwd}
+                  className="flex-1 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                  disabled={pwdLoading}
+                >
+                  取消
+                </button>
+                <button
+                  onClick={submitChangePwd}
+                  disabled={pwdLoading || !!pwdSuccess}
+                  className="flex-1 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {pwdLoading ? '修改中...' : '确认修改'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

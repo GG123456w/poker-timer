@@ -1,7 +1,8 @@
-// 简单的本地鉴权（仅前端 hash 校验，安全性有限，但能阻挡普通用户）
-// 生产环境强烈建议接入真正的后端鉴权（云开发 / Auth0 / Supabase Auth）
+// 本地鉴权（前端 hash 校验，安全性有限，但能阻挡普通用户）
+// 生产环境建议接入真正的后端鉴权（云开发 / Auth0 / Supabase Auth）
 
 const AUTH_KEY = 'poker-timer-auth-v1';
+const CRED_KEY = 'poker-timer-cred-v1';
 
 // 简易 hash 函数（仅防明文存储，生产环境用 bcrypt/argon2）
 const simpleHash = (str: string): string => {
@@ -9,9 +10,8 @@ const simpleHash = (str: string): string => {
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
+    hash = hash & hash;
   }
-  // 加上一个固定盐值混淆
   const salt = 'poker-timer-2026';
   const combined = str + salt;
   let h = 0;
@@ -22,17 +22,25 @@ const simpleHash = (str: string): string => {
   return 'h_' + Math.abs(hash).toString(36) + '_' + Math.abs(h).toString(36);
 };
 
-// 默认账号密码（用户可在 src/utils/auth.ts 修改）
-export const DEFAULT_CREDENTIALS = {
-  username: 'admin',
-  password: 'admin888',
+// 默认凭据（仅首次使用，修改后会写入 localStorage）
+const DEFAULT = { username: 'admin', password: 'admin888' };
+
+// 读取当前凭据（localStorage 优先）
+const getCredHash = (): { username: string; password: string } => {
+  try {
+    const raw = localStorage.getItem(CRED_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  // 首次使用：写入默认值
+  const def = {
+    username: simpleHash(DEFAULT.username),
+    password: simpleHash(DEFAULT.password),
+  };
+  localStorage.setItem(CRED_KEY, JSON.stringify(def));
+  return def;
 };
 
-// 凭据 hash（运行时计算一次）
-const CRED_HASH = {
-  username: simpleHash(DEFAULT_CREDENTIALS.username),
-  password: simpleHash(DEFAULT_CREDENTIALS.password),
-};
+export const DEFAULT_USERNAME = DEFAULT.username;
 
 export interface AuthSession {
   username: string;
@@ -40,12 +48,13 @@ export interface AuthSession {
   expiresAt: number;
 }
 
-const SESSION_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 天
+const SESSION_DURATION = 30 * 24 * 60 * 60 * 1000; // 30 天
 
 export const login = (username: string, password: string): boolean => {
+  const cred = getCredHash();
   const u = simpleHash(username);
   const p = simpleHash(password);
-  if (u === CRED_HASH.username && p === CRED_HASH.password) {
+  if (u === cred.username && p === cred.password) {
     const session: AuthSession = {
       username,
       loginAt: Date.now(),
@@ -76,10 +85,23 @@ export const getSession = (): AuthSession | null => {
   }
 };
 
-export const setLocalSession = (session: AuthSession): void => {
-  localStorage.setItem(AUTH_KEY, JSON.stringify(session));
-};
-
 export const isLoggedIn = (): boolean => {
   return getSession() !== null;
+};
+
+// 修改密码（需要验证旧密码）
+export const changePassword = (oldPassword: string, newPassword: string): { ok: boolean; error?: string } => {
+  if (!newPassword || newPassword.length < 6) {
+    return { ok: false, error: '新密码至少 6 位' };
+  }
+  const cred = getCredHash();
+  if (simpleHash(oldPassword) !== cred.password) {
+    return { ok: false, error: '旧密码错误' };
+  }
+  const newCred = {
+    username: cred.username, // 用户名不修改
+    password: simpleHash(newPassword),
+  };
+  localStorage.setItem(CRED_KEY, JSON.stringify(newCred));
+  return { ok: true };
 };

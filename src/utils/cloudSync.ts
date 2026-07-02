@@ -59,6 +59,11 @@ export const cloudRegister = async (username: string, password: string): Promise
   if (!r.success) throw new Error(r.errMsg || '注册失败');
 };
 
+export const cloudChangePassword = async (oldPassword: string, newPassword: string): Promise<void> => {
+  const r = await call(AUTH_URL, { action: 'changePassword', oldPassword, newPassword });
+  if (!r.success) throw new Error(r.errMsg || '修改失败');
+};
+
 export const cloudVerify = async (): Promise<CloudSession | null> => {
   const raw = localStorage.getItem(SESSION_KEY);
   if (!raw) return null;
