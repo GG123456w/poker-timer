@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTimer } from '../contexts/TimerContext';
 import { Maximize, Minimize, ArrowLeft, LogOut, User } from 'lucide-react';
 import { logout, getSession } from '../utils/auth';
+import { cloudLogout } from '../utils/cloudSync';
 
 const formatTime = (s: number): string => {
   const m = Math.floor(s / 60);
@@ -17,7 +18,7 @@ const AdminPage: React.FC = () => {
   const nextLevel = levels[currentLevelIndex + 1];
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
-  const [session, setSession] = useState(() => getSession());
+  const [session] = useState(() => getSession());
   const [localConfig, setLocalConfig] = useState({
     startSB: 100,
     startBB: 200,
@@ -34,7 +35,8 @@ const AdminPage: React.FC = () => {
 
   const handleLogout = () => {
     if (confirm('确定要退出登录吗？')) {
-      logout();
+      cloudLogout();   // 清云端 session
+      logout();        // 清本地 session
       window.location.hash = '#/admin';  // 触发 hashchange 跳转到 LoginPage
       window.location.reload();
     }

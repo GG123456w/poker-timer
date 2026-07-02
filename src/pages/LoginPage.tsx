@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { LogIn, Lock, User, Eye, EyeOff } from 'lucide-react';
-import { login, isLoggedIn, DEFAULT_CREDENTIALS } from '../utils/auth';
+import { LogIn, Lock, User, Eye, EyeOff, Cloud, CloudOff } from 'lucide-react';
+import { isLoggedIn, DEFAULT_CREDENTIALS, setLocalSession } from '../utils/auth';
+import { cloudLogin, cloudRegister, isCloudEnabled } from '../utils/cloudSync';
 
 const LoginPage: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -8,30 +9,46 @@ const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const cloudOn = isCloudEnabled();
 
-  // 已登录则自动跳转
   useEffect(() => {
     if (isLoggedIn()) {
       window.location.hash = '#/admin';
     }
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    // 模拟网络延迟
-    setTimeout(() => {
-      const ok = login(username, password);
-      if (ok) {
-        window.location.hash = '#/admin';
-        window.location.reload();
+    try {
+      if (cloudOn) {
+        // 云端鉴权
+        if (mode === 'register') {
+          await cloudRegister(username, password);
+          setError('注册成功，请登录');
+          setMode('login');
+        } else {
+          const session = await cloudLogin(username, password);
+          setLocalSession({ username: session.username, loginAt: Date.now(), expiresAt: session.expiresAt });
+        }
       } else {
-        setError('账号或密码错误');
-        setLoading(false);
+        // 本地 fallback（无云开发时）
+        if (username === DEFAULT_CREDENTIALS.username && password === DEFAULT_CREDENTIALS.password) {
+          setLocalSession({ username, loginAt: Date.now(), expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000 });
+        } else {
+          throw new Error('账号或密码错误（默认 admin/admin888）');
+        }
       }
-    }, 300);
+      window.location.hash = '#/admin';
+      window.location.reload();
+    } catch (e: any) {
+      setError(e.message || '登录失败');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -59,11 +76,24 @@ const LoginPage: React.FC = () => {
             扑克盲注计时器
           </h1>
           <p className="text-gray-400 text-sm">后台管理系统</p>
+          {/* 云开发状态 */}
+          <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs"
+            style={{
+              background: cloudOn ? 'rgba(34, 197, 94, 0.1)' : 'rgba(156, 163, 175, 0.1)',
+              color: cloudOn ? '#22c55e' : '#9ca3af',
+              border: `1px solid ${cloudOn ? 'rgba(34, 197, 94, 0.3)' : 'rgba(156, 163, 175, 0.3)'}`,
+            }}
+          >
+            {cloudOn ? <Cloud size={12} /> : <CloudOff size={12} />}
+            <span>{cloudOn ? '云端鉴权已启用' : '本地鉴权模式'}</span>
+          </div>
         </div>
 
         {/* 登录卡片 */}
         <div className="bg-gray-900/80 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-gray-800">
-          <h2 className="text-2xl font-bold text-white mb-6 text-center">管理员登录</h2>
+          <h2 className="text-2xl font-bold text-white mb-6 text-center">
+            {cloudOn ? (mode === 'login' ? '管理员登录' : '注册新账号') : '管理员登录'}
+          </h2>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* 账号 */}
@@ -92,10 +122,11 @@ const LoginPage: React.FC = () => {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="请输入密码"
+                  placeholder={cloudOn ? '密码至少 6 位' : '默认 admin888'}
                   className="w-full pl-11 pr-11 py-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition-all"
                   autoComplete="current-password"
                   required
+                  minLength={cloudOn ? 6 : 1}
                 />
                 <button
                   type="button"
@@ -109,7 +140,9 @@ const LoginPage: React.FC = () => {
 
             {/* 错误提示 */}
             {error && (
-              <div className="bg-red-500/10 border border-red-500/50 rounded-lg px-4 py-3 text-red-400 text-sm text-center">
+              <div className={`rounded-lg px-4 py-3 text-sm text-center ${
+                error.includes('成功') ? 'bg-green-500/10 border border-green-500/50 text-green-400' : 'bg-red-500/10 border border-red-500/50 text-red-400'
+              }`}>
                 {error}
               </div>
             )}
@@ -123,24 +156,39 @@ const LoginPage: React.FC = () => {
               {loading ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>登录中...</span>
+                  <span>{mode === 'login' ? '登录中...' : '注册中...'}</span>
                 </>
               ) : (
                 <>
                   <LogIn className="w-5 h-5" />
-                  <span>登 录</span>
+                  <span>{mode === 'login' ? '登 录' : '注 册'}</span>
                 </>
               )}
             </button>
+
+            {/* 切换登录/注册（仅云端模式） */}
+            {cloudOn && (
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }}
+                  className="text-sm text-amber-500 hover:text-amber-400 transition-colors"
+                >
+                  {mode === 'login' ? '没有账号？立即注册' : '已有账号？返回登录'}
+                </button>
+              </div>
+            )}
           </form>
 
           {/* 提示信息 */}
           <div className="mt-6 pt-6 border-t border-gray-800">
-            <p className="text-center text-gray-500 text-xs">
-              默认账号：<span className="text-amber-500 font-mono">{DEFAULT_CREDENTIALS.username}</span>
-              <span className="mx-2">·</span>
-              默认密码：<span className="text-amber-500 font-mono">{DEFAULT_CREDENTIALS.password}</span>
-            </p>
+            {!cloudOn && (
+              <p className="text-center text-gray-500 text-xs">
+                默认账号：<span className="text-amber-500 font-mono">{DEFAULT_CREDENTIALS.username}</span>
+                <span className="mx-2">·</span>
+                默认密码：<span className="text-amber-500 font-mono">{DEFAULT_CREDENTIALS.password}</span>
+              </p>
+            )}
             <p className="text-center text-gray-600 text-xs mt-2">
               登录后 7 天内自动免登录
             </p>
@@ -149,7 +197,7 @@ const LoginPage: React.FC = () => {
 
         {/* 底部版权 */}
         <p className="text-center text-gray-600 text-xs mt-6">
-          © 2026 扑克盲注计时器 · Powered by Vercel
+          © 2026 扑克盲注计时器 · Powered by Vercel + 微信云开发
         </p>
       </div>
     </div>

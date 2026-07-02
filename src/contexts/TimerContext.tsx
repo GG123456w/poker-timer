@@ -4,6 +4,7 @@ import type { TimerState, BlindLevel, TimerSettings } from '../types';
 import { loadState, saveState, loadSettings, saveSettings, saveLevels } from '../utils/storage';
 import { playWarningBeep, playLevelUpBeep, playEndBeep } from '../utils/sound';
 import { defaultSettings, defaultTemplates } from '../data/defaultTemplates';
+import { cloudSetState } from '../utils/cloudSync';
 
 type TimerAction =
   | { type: 'START' }
@@ -263,17 +264,8 @@ export const TimerProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     };
   }, []);
 
-  // state 变化时写 storage（比较内容避免死循环）
-  useEffect(() => {
-    if (!initialized) return;
-    const serialized = JSON.stringify(state);
-    if (serialized === lastWrittenRef.current) return;
-    lastWrittenRef.current = serialized;
-    saveState(state);
-    saveSettings(state.settings);
-    saveLevels(state.levels);
-    try { bcRef.current?.postMessage('update'); } catch {}
-  }, [state, initialized]);
+  // state 变化时写 storage + 异步同步到云端（节流：1s 内只写一次）
+  const lastCloudSyncRef = useRef<number>(0);
 
   // 自动跳级检查：只在 admin tab 跑（投屏页只显示）
   const [isAdmin, setIsAdmin] = useState<boolean>(
@@ -284,6 +276,32 @@ export const TimerProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     window.addEventListener('hashchange', check);
     return () => window.removeEventListener('hashchange', check);
   }, []);
+
+  useEffect(() => {
+    if (!initialized) return;
+    const serialized = JSON.stringify(state);
+    if (serialized === lastWrittenRef.current) return;
+    lastWrittenRef.current = serialized;
+    saveState(state);
+    saveSettings(state.settings);
+    saveLevels(state.levels);
+    try { bcRef.current?.postMessage('update'); } catch {}
+
+    // 异步同步到云端（节流：至少间隔 1 秒，避免 TICK 频繁触发）
+    const now = Date.now();
+    if (isAdmin && now - lastCloudSyncRef.current > 1000) {
+      lastCloudSyncRef.current = now;
+      cloudSetState({
+        currentLevelIndex: state.currentLevelIndex,
+        startedAt: state.startedAt,
+        levelStartAt: state.levelStartAt,
+        pausedAt: state.pausedAt,
+        isRunning: state.isRunning,
+        levels: state.levels,
+        settings: state.settings,
+      }).catch(() => {});
+    }
+  }, [state, initialized, isAdmin]);
 
   useEffect(() => {
     if (!isAdmin) return;

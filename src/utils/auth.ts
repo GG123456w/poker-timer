@@ -76,6 +76,10 @@ export const getSession = (): AuthSession | null => {
   }
 };
 
+export const setLocalSession = (session: AuthSession): void => {
+  localStorage.setItem(AUTH_KEY, JSON.stringify(session));
+};
+
 export const isLoggedIn = (): boolean => {
   return getSession() !== null;
 };
