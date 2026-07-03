@@ -290,20 +290,6 @@ const AdminPage: React.FC = () => {
               </div>
             </div>
           </div>
-          {/* 实时预览 */}
-          <div className="mt-2 p-4 bg-black/40 border border-white/10 rounded-lg text-center">
-            <div className="text-xs text-gray-500 mb-1">预览</div>
-            <div
-              className="font-mono font-bold"
-              style={{
-                fontSize: `${Math.min(80, (settings.countdownFontSize || 220) / 3)}px`,
-                color: settings.countdownColor || '#fbbf24',
-                textShadow: `0 0 20px ${settings.countdownColor || '#fbbf24'}80`,
-              }}
-            >
-              10:00
-            </div>
-          </div>
         </div>
 
         {/* 盲注结构配置（折叠） */}

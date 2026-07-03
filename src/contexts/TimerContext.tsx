@@ -35,14 +35,22 @@ const initialState: TimerState = {
 
 // 派生计算：从 startedAt + levelStartAt 算出当前 elapsedTime 和 levelStartTotal
 export const deriveTimes = (state: TimerState): { elapsedTime: number; levelStartTotal: number; levelUsed: number; levelRemaining: number } => {
-  if (!state.startedAt || !state.isRunning) {
+  const levelDur = (state.levels[state.currentLevelIndex]?.duration || 0) * 60; // 本级总时长（秒）
+  // 完全未开始：起始数字 = 本级总时长（与盲注结构中每级分钟一致）
+  if (!state.startedAt) {
+    return { elapsedTime: 0, levelStartTotal: 0, levelUsed: 0, levelRemaining: levelDur };
+  }
+  // 暂停中：使用 pausedAt 作为时间基准
+  if (!state.isRunning && state.pausedAt) {
+    const usedAtPause = Math.floor((state.pausedAt - state.levelStartAt) / 1000);
     return {
-      elapsedTime: state.elapsedTime || 0,
-      levelStartTotal: state.levelStartTotal || 0,
-      levelUsed: 0,
-      levelRemaining: 0,
+      elapsedTime: state.elapsedTime,
+      levelStartTotal: state.levelStartTotal,
+      levelUsed: usedAtPause,
+      levelRemaining: Math.max(0, levelDur - usedAtPause),
     };
   }
+  // 计时中：实时计算
   const now = Date.now();
   const elapsedMs = now - state.startedAt;
   const levelStartMs = state.levelStartAt - state.startedAt;
@@ -50,7 +58,7 @@ export const deriveTimes = (state: TimerState): { elapsedTime: number; levelStar
     elapsedTime: Math.floor(elapsedMs / 1000),
     levelStartTotal: Math.floor(levelStartMs / 1000),
     levelUsed: Math.floor((now - state.levelStartAt) / 1000),
-    levelRemaining: Math.ceil((state.levels[state.currentLevelIndex]?.duration * 60 * 1000 - (now - state.levelStartAt)) / 1000),
+    levelRemaining: Math.ceil((levelDur * 1000 - (now - state.levelStartAt)) / 1000),
   };
 };
 
