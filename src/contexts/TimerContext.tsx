@@ -65,6 +65,8 @@ function timerReducer(state: TimerState, action: TimerAction): TimerState {
           ...state,
           startedAt: now,
           levelStartAt: now,
+          elapsedTime: 0,
+          levelStartTotal: 0,
           isRunning: true,
           settings: { ...state.settings, isPaused: false },
         };

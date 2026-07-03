@@ -23,6 +23,12 @@ export interface TimerSettings {
   avgChips: number;
   screenId: string;
   isRegistrationClosed: boolean;
+
+  // ---- 样式可配置（参考图风格） ----
+  tournamentTitle: string;     // 大标题 "All in 酒馆"
+  countdownFontSize: number;   // 中央倒计时字号（默认 220）
+  countdownColor: string;      // 倒计时颜色（默认 #fbbf24 金色）
+  remainingCount: number;      // 剩余人数（左栏显示）
 }
 
 export interface TimerState {

@@ -1,54 +1,69 @@
 import React from 'react';
 import { useTimer } from '../../contexts/TimerContext';
+import { Users, UserCheck, Coins, Banknote } from 'lucide-react';
 
 const LeftPanel: React.FC = () => {
   const { state } = useTimer();
-  const { levels, currentLevelIndex, settings } = state;
-  const currentLevel = levels[currentLevelIndex];
-  const { entrantCount, maxEntrants, isRegistrationClosed, tournamentName } = settings;
+  const { settings } = state;
+  const { entrantCount, remainingCount, totalChips, isRegistrationClosed } = settings;
+
+  const avgChips = remainingCount > 0 ? Math.round(totalChips / remainingCount) : 0;
+
+  const items = [
+    { icon: Users, label: '参赛人数', value: entrantCount, color: '#fbbf24' },
+    { icon: UserCheck, label: '剩余人数', value: remainingCount, color: '#fbbf24' },
+    { icon: Coins, label: '平均记分牌', value: avgChips.toLocaleString(), color: '#fbbf24' },
+    { icon: Banknote, label: '总积分牌', value: totalChips.toLocaleString(), color: '#fbbf24' },
+  ];
 
   return (
-    <div className="flex flex-col h-full text-white">
-      {/* 顶部：赛事名称 */}
-      <div className="text-center flex-shrink-0">
-        <div
-          className="font-bold tracking-wider"
-          style={{ fontSize: 'clamp(1.3rem, 2.2vw, 2rem)' }}
-        >
-          {tournamentName}
-        </div>
-      </div>
+    <div
+      className="rounded-2xl p-6 flex flex-col h-full"
+      style={{
+        background: 'rgba(20, 20, 20, 0.6)',
+        border: '1px solid rgba(251, 191, 36, 0.25)',
+        boxShadow: '0 0 30px rgba(251, 191, 36, 0.05)',
+      }}
+    >
+      {items.map((it, idx) => {
+        const Icon = it.icon;
+        return (
+          <React.Fragment key={it.label}>
+            <div className="flex items-center gap-5 py-4 flex-1">
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{
+                  background: `radial-gradient(circle, ${it.color} 0%, #b45309 80%)`,
+                  boxShadow: `0 0 20px ${it.color}80, inset 0 -3px 8px rgba(0,0,0,0.3)`,
+                }}
+              >
+                <Icon className="w-8 h-8 text-white" strokeWidth={2.5} />
+              </div>
+              <div className="flex-1 text-right">
+                <div className="text-gray-300 text-lg font-medium mb-1">{it.label}</div>
+                <div
+                  className="text-white font-bold leading-none"
+                  style={{ fontSize: 'clamp(2rem, 3.5vw, 3rem)' }}
+                >
+                  {it.value}
+                </div>
+              </div>
+            </div>
+            {idx < items.length - 1 && (
+              <div className="h-px bg-gradient-to-r from-transparent via-amber-500/30 to-transparent" />
+            )}
+          </React.Fragment>
+        );
+      })}
 
-      {/* 中部：当前级别 + 参赛人数 + 停止报名 */}
-      <div className="flex-1 flex flex-col justify-center items-center space-y-8">
-        <div className="text-center">
-          <div className="text-white font-semibold tracking-wider" style={{ fontSize: 'clamp(0.95rem, 1.3vw, 1.2rem)' }}>当前级别</div>
-          <div className="text-gray-400 font-semibold tracking-wider" style={{ fontSize: 'clamp(0.8rem, 1.1vw, 1rem)' }}>Current level</div>
-          <div className="text-white font-bold mt-1 leading-none" style={{ fontSize: 'clamp(3.5rem, 7vw, 6rem)' }}>
-            {currentLevel?.level || 1}
-          </div>
-        </div>
-
-        <div className="text-center">
-          <div className="text-white font-semibold tracking-wider" style={{ fontSize: 'clamp(0.95rem, 1.3vw, 1.2rem)' }}>参赛人数</div>
-          <div className="text-gray-400 font-semibold tracking-wider" style={{ fontSize: 'clamp(0.8rem, 1.1vw, 1rem)' }}>Entrants</div>
-          <div className="text-white font-bold mt-1 leading-none" style={{ fontSize: 'clamp(2.5rem, 5.5vw, 4.5rem)' }}>
-            {entrantCount}/{maxEntrants}
-          </div>
-        </div>
-
+      {/* 报名状态 */}
+      <div className="mt-4 text-center">
         {isRegistrationClosed ? (
-          <div
-            className="px-6 py-1.5 bg-red-600 text-white font-bold rounded"
-            style={{ fontSize: 'clamp(0.85rem, 1.1vw, 1.05rem)' }}
-          >
+          <div className="px-4 py-1.5 bg-red-600/90 text-white font-bold rounded text-sm">
             停止报名
           </div>
         ) : (
-          <div
-            className="px-6 py-1.5 bg-green-600 text-white font-bold rounded animate-pulse"
-            style={{ fontSize: 'clamp(0.85rem, 1.1vw, 1.05rem)' }}
-          >
+          <div className="px-4 py-1.5 bg-green-600/90 text-white font-bold rounded text-sm animate-pulse">
             接受报名
           </div>
         )}

@@ -215,6 +215,10 @@ const AdminPage: React.FC = () => {
               <input className="w-full mt-1 px-3 py-2 bg-black/40 border border-white/20 rounded text-center text-2xl font-bold" type="number" value={settings.entrantCount} onChange={e => updateSettings({ entrantCount: Number(e.target.value) })} />
             </div>
             <div>
+              <label className="text-xs text-gray-400">剩余人数</label>
+              <input className="w-full mt-1 px-3 py-2 bg-black/40 border border-white/20 rounded text-center text-2xl font-bold" type="number" value={settings.remainingCount} onChange={e => updateSettings({ remainingCount: Number(e.target.value) })} />
+            </div>
+            <div>
               <label className="text-xs text-gray-400">满员</label>
               <input className="w-full mt-1 px-3 py-2 bg-black/40 border border-white/20 rounded text-center text-2xl font-bold" type="number" value={settings.maxEntrants} onChange={e => updateSettings({ maxEntrants: Number(e.target.value) })} />
             </div>
@@ -222,10 +226,11 @@ const AdminPage: React.FC = () => {
               <label className="text-xs text-gray-400">总记分牌</label>
               <input className="w-full mt-1 px-3 py-2 bg-black/40 border border-white/20 rounded text-center text-2xl font-bold" type="number" value={settings.totalChips} onChange={e => updateSettings({ totalChips: Number(e.target.value) })} />
             </div>
-            <div>
-              <label className="text-xs text-gray-400">平均记分牌</label>
-              <input className="w-full mt-1 px-3 py-2 bg-black/40 border border-white/20 rounded text-center text-2xl font-bold" type="number" value={settings.avgChips} onChange={e => updateSettings({ avgChips: Number(e.target.value) })} />
-            </div>
+          </div>
+          <div className="text-xs text-gray-500 text-center">
+            平均记分牌 = 总记分牌 / 剩余人数 = {settings.totalChips && settings.remainingCount
+              ? Math.round(settings.totalChips / Math.max(1, settings.remainingCount)).toLocaleString()
+              : 0}
           </div>
           <div>
             <label className="text-xs text-gray-400">警告秒数（最后几秒变红）</label>
@@ -237,6 +242,47 @@ const AdminPage: React.FC = () => {
           >
             {settings.isRegistrationClosed ? '已停止报名（点击接受报名）' : '接受报名中（点击停止报名）'}
           </button>
+        </div>
+
+        {/* 显示样式（参考图风格） */}
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-3">
+          <h2 className="text-base font-semibold mb-2" style={{ color: '#c5a572' }}>显示样式（投屏页大屏）</h2>
+          <div>
+            <label className="text-xs text-gray-400">大标题（中央顶部）</label>
+            <input
+              className="w-full mt-1 px-3 py-2 bg-black/40 border border-white/20 rounded text-center text-lg"
+              value={settings.tournamentTitle || ''}
+              onChange={e => updateSettings({ tournamentTitle: e.target.value })}
+              placeholder="All in 酒馆"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-gray-400">倒计时字号（80-360 px）</label>
+              <input
+                className="w-full mt-1 px-3 py-2 bg-black/40 border border-white/20 rounded text-center"
+                type="number" min="80" max="360"
+                value={settings.countdownFontSize || 220}
+                onChange={e => updateSettings({ countdownFontSize: Number(e.target.value) })}
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-400">倒计时颜色</label>
+              <div className="flex gap-2 mt-1">
+                <input
+                  type="color"
+                  className="w-12 h-10 bg-black/40 border border-white/20 rounded"
+                  value={settings.countdownColor || '#fbbf24'}
+                  onChange={e => updateSettings({ countdownColor: e.target.value })}
+                />
+                <input
+                  className="flex-1 px-3 py-2 bg-black/40 border border-white/20 rounded text-center font-mono"
+                  value={settings.countdownColor || '#fbbf24'}
+                  onChange={e => updateSettings({ countdownColor: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* 盲注结构配置（折叠） */}

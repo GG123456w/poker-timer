@@ -1,17 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useTimer } from '../contexts/TimerContext';
 import CountdownDisplay from '../components/DisplayArea/CountdownDisplay';
-import BlindInfo from '../components/DisplayArea/BlindInfo';
 import LeftPanel from '../components/DisplayArea/LeftPanel';
 import RightPanel from '../components/DisplayArea/RightPanel';
+import LevelProgressBar from '../components/DisplayArea/LevelProgressBar';
 import { Maximize, Minimize } from 'lucide-react';
 
-interface TimerPageProps { onConfigClick?: () => void; }
-
-const TimerPage: React.FC<TimerPageProps> = () => {
+const TimerPage: React.FC = () => {
   const { state } = useTimer();
   const { settings } = state;
-  const { eventTitle } = settings;
+  const { tournamentTitle } = settings;
   const [showFullscreenBtn, setShowFullscreenBtn] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -21,6 +19,15 @@ const TimerPage: React.FC<TimerPageProps> = () => {
     return () => document.removeEventListener('fullscreenchange', handler);
   }, []);
 
+  // 北京时间（用 state 触发 250ms re-render）
+  const [, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(id);
+  }, []);
+  const formatTime = (d: Date) =>
+    `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
+
   const toggleFullscreen = async () => {
     try {
       if (!document.fullscreenElement) {
@@ -28,22 +35,17 @@ const TimerPage: React.FC<TimerPageProps> = () => {
       } else {
         await document.exitFullscreen();
       }
-    } catch (e) {
-      console.error('全屏切换失败', e);
-    }
+    } catch (e) { console.error('全屏切换失败', e); }
   };
 
   return (
     <div
       className="h-screen w-full flex flex-col overflow-hidden relative"
-      style={{
-        background: 'radial-gradient(ellipse at center, #1a1410 0%, #050302 100%)',
-        backgroundColor: '#050302',
-      }}
+      style={{ background: '#000' }}
       onMouseMove={() => setShowFullscreenBtn(true)}
       onMouseLeave={() => setShowFullscreenBtn(false)}
     >
-      {/* 悬浮全屏按钮（鼠标移动时显示） */}
+      {/* 悬浮全屏按钮 */}
       <div
         className={`absolute top-4 right-4 z-50 transition-opacity duration-300 ${
           showFullscreenBtn ? 'opacity-100' : 'opacity-0 pointer-events-none'
@@ -51,54 +53,63 @@ const TimerPage: React.FC<TimerPageProps> = () => {
       >
         <button
           onClick={toggleFullscreen}
-          className="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all duration-200 hover:scale-110"
+          className="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 hover:bg-white/20 text-white"
           title={isFullscreen ? '退出全屏' : '全屏'}
         >
           {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
         </button>
       </div>
 
-      <div className="flex-1 grid grid-cols-12 gap-2 md:gap-6 px-3 md:px-6 py-3 md:py-4 min-h-0">
-        {/* Left Panel */}
-        <div className="col-span-3 border-r border-white/10 pr-2 md:pr-4 min-h-0">
+      {/* 顶部：左 上 北京时间 / 中 大标题 */}
+      <div className="grid grid-cols-12 gap-2 md:gap-6 px-3 md:px-6 pt-8 md:pt-10 flex-shrink-0">
+        <div className="col-span-3 flex items-start">
+          <div
+            className="font-bold tracking-wider"
+            style={{
+              color: '#fbbf24',
+              fontSize: 'clamp(1.4rem, 2.2vw, 2.4rem)',
+              textShadow: '0 0 15px rgba(251, 191, 36, 0.5)',
+            }}
+          >
+            {formatTime(new Date())}
+          </div>
+        </div>
+        <div className="col-span-6 text-center">
+          <div
+            className="font-black tracking-wider leading-tight"
+            style={{
+              fontSize: 'clamp(2.5rem, 5vw, 4.5rem)',
+              background: 'linear-gradient(180deg, #ffffff 0%, #fde68a 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              filter: 'drop-shadow(0 0 30px rgba(255, 215, 0, 0.4))',
+              fontFamily: 'Georgia, serif',
+            }}
+          >
+            {tournamentTitle || 'All in 酒馆'}
+          </div>
+        </div>
+        <div className="col-span-3" />
+      </div>
+
+      {/* 中部：左 / 中（倒计时+盲注） / 右 */}
+      <div className="flex-1 grid grid-cols-12 gap-3 md:gap-6 px-3 md:px-6 py-3 md:py-4 min-h-0">
+        <div className="col-span-3 min-h-0">
           <LeftPanel />
         </div>
 
-        {/* Center Panel */}
-        <div className="col-span-6 flex flex-col items-center min-h-0 px-2">
-          {/* 顶部：赛事大标题（下移一点） */}
-          <div className="text-center flex-shrink-0 w-full mt-12">
-            <div
-              className="font-black tracking-wider leading-tight"
-              style={{
-                fontSize: 'clamp(2.5rem, 5vw, 4.5rem)',
-                background: 'linear-gradient(135deg, #FFD700 0%, #FF6B35 50%, #FFD700 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                textShadow: 'none',
-                filter: 'drop-shadow(0 0 30px rgba(255, 215, 0, 0.4))',
-              }}
-            >
-              {eventTitle}
-            </div>
-          </div>
-
-          {/* 倒计时 - 居中显示 */}
-          <div className="flex-1 flex items-center justify-center min-h-0 w-full" style={{ minHeight: '240px' }}>
-            <CountdownDisplay />
-          </div>
-
-          {/* 盲注信息 */}
-          <div className="w-full flex-shrink-0 pl-2">
-            <BlindInfo />
-          </div>
+        <div className="col-span-6 min-h-0">
+          <CountdownDisplay />
         </div>
 
-        {/* Right Panel */}
-        <div className="col-span-3 border-l border-white/10 pl-2 md:pl-4 min-h-0">
+        <div className="col-span-3 min-h-0">
           <RightPanel />
         </div>
+      </div>
+
+      {/* 底部：级别进度条 */}
+      <div className="flex-shrink-0 px-3 md:px-6 pb-4">
+        <LevelProgressBar />
       </div>
     </div>
   );

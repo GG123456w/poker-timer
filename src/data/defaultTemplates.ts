@@ -27,11 +27,11 @@ const createLevels = (config: { startSB: number; startBB: number; duration: numb
 export const defaultTemplates = [
   {
     name: '标准锦标赛',
-    description: '24个级别，每级15分钟',
+    description: '24个级别，每级10分钟',
     levels: createLevels({
       startSB: 100,
       startBB: 200,
-      duration: 15,
+      duration: 10,
       levelCount: 24,
       multiplier: 2,
     }),
@@ -75,4 +75,9 @@ export const defaultSettings = {
   avgChips: 20000,
   screenId: '1',
   isRegistrationClosed: true,
+  // 参考图风格配置
+  tournamentTitle: 'All in 酒馆',
+  countdownFontSize: 220,
+  countdownColor: '#fbbf24',
+  remainingCount: 10,
 };

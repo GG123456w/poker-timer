@@ -1,12 +1,12 @@
 import type { TimerState, TimerSettings, BlindLevel } from '../types';
 import { defaultTemplates, defaultSettings } from '../data/defaultTemplates';
 
-const STORAGE_KEY = 'poker-timer-state-v8';
-const SETTINGS_KEY = 'poker-timer-settings-v8';
-const LEVELS_KEY = 'poker-timer-levels-v8';
+const STORAGE_KEY = 'poker-timer-state-v9';
+const SETTINGS_KEY = 'poker-timer-settings-v9';
+const LEVELS_KEY = 'poker-timer-levels-v9';
 
 (function cleanupOldKeys() {
-  for (let i = 1; i <= 7; i++) {
+  for (let i = 1; i <= 8; i++) {
     try { localStorage.removeItem(`poker-timer-state-v${i}`); } catch {}
     try { localStorage.removeItem(`poker-timer-settings-v${i}`); } catch {}
     try { localStorage.removeItem(`poker-timer-levels-v${i}`); } catch {}
