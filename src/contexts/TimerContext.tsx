@@ -229,10 +229,23 @@ export const TimerProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setInitialized(true);
   }, []);
 
-  // 每 250ms 强制 re-render（让 UI 计算最新 elapsedTime）
+  // 整秒对齐的全局 tick：所有用 getDerived() 的组件在同一秒 re-render
+  // 第一次对齐到下一个整秒，之后每 1000ms 触发一次
   useEffect(() => {
-    const id = setInterval(() => setTick(t => (t + 1) % 1000000), 250);
-    return () => clearInterval(id);
+    let timeoutId: number;
+    let stopped = false;
+    const fire = () => {
+      if (stopped) return;
+      setTick(t => (t + 1) % 1000000);
+      timeoutId = window.setTimeout(fire, 1000);
+    };
+    // 对齐到下一个整秒边界
+    const ms = 1000 - (Date.now() % 1000);
+    timeoutId = window.setTimeout(fire, ms);
+    return () => {
+      stopped = true;
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   // 跨标签页同步

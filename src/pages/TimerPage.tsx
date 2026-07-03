@@ -19,11 +19,23 @@ const TimerPage: React.FC = () => {
     return () => document.removeEventListener('fullscreenchange', handler);
   }, []);
 
-  // 北京时间（用 state 触发 250ms re-render）
-  const [, setNow] = useState(Date.now());
+  // 整秒对齐的本地 tick：与 TimerContext 共享同一个整秒节奏
+  // 第一次对齐到下一个整秒边界，之后每 1000ms 触发
+  const [, setNow] = useState(0);
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 250);
-    return () => clearInterval(id);
+    let timeoutId: number;
+    let stopped = false;
+    const fire = () => {
+      if (stopped) return;
+      setNow(n => n + 1);
+      timeoutId = window.setTimeout(fire, 1000);
+    };
+    const ms = 1000 - (Date.now() % 1000);
+    timeoutId = window.setTimeout(fire, ms);
+    return () => {
+      stopped = true;
+      clearTimeout(timeoutId);
+    };
   }, []);
   const formatTime = (d: Date) =>
     `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
