@@ -5,6 +5,8 @@ const STORAGE_KEY = 'poker-timer-state-v9';
 const SETTINGS_KEY = 'poker-timer-settings-v9';
 const LEVELS_KEY = 'poker-timer-levels-v9';
 
+export { STORAGE_KEY, SETTINGS_KEY, LEVELS_KEY };
+
 (function cleanupOldKeys() {
   for (let i = 1; i <= 8; i++) {
     try { localStorage.removeItem(`poker-timer-state-v${i}`); } catch {}

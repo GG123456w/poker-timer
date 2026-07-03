@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { TimerState, BlindLevel, TimerSettings } from '../types';
-import { loadState, saveState, loadSettings, saveSettings, saveLevels } from '../utils/storage';
+import { loadState, saveState, loadSettings, saveSettings, saveLevels, STORAGE_KEY, SETTINGS_KEY, LEVELS_KEY } from '../utils/storage';
 import { playWarningBeep, playLevelUpBeep, playEndBeep } from '../utils/sound';
 import { defaultSettings, defaultTemplates } from '../data/defaultTemplates';
 import { cloudSetState } from '../utils/cloudSync';
@@ -252,13 +252,13 @@ export const TimerProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     };
     window.addEventListener('storage', onStorage);
 
-    let lastSeenState = localStorage.getItem('poker-timer-state-v8');
-    let lastSeenSettings = localStorage.getItem('poker-timer-settings-v8');
-    let lastSeenLevels = localStorage.getItem('poker-timer-levels-v8');
+    let lastSeenState = localStorage.getItem(STORAGE_KEY);
+    let lastSeenSettings = localStorage.getItem(SETTINGS_KEY);
+    let lastSeenLevels = localStorage.getItem(LEVELS_KEY);
     const interval = setInterval(() => {
-      const curState = localStorage.getItem('poker-timer-state-v8');
-      const curSettings = localStorage.getItem('poker-timer-settings-v8');
-      const curLevels = localStorage.getItem('poker-timer-levels-v8');
+      const curState = localStorage.getItem(STORAGE_KEY);
+      const curSettings = localStorage.getItem(SETTINGS_KEY);
+      const curLevels = localStorage.getItem(LEVELS_KEY);
       if (curState !== lastSeenState || curSettings !== lastSeenSettings || curLevels !== lastSeenLevels) {
         lastSeenState = curState;
         lastSeenSettings = curSettings;
@@ -316,18 +316,22 @@ export const TimerProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   useEffect(() => {
     if (!isAdmin) return;
     if (state.isRunning) {
+      // 用 100ms 检查，对齐到整秒：和北京时间秒变化完全同步
+      let lastSec = Math.floor((Date.now() - state.levelStartAt) / 1000);
       const id = setInterval(() => {
+        const cur = stateRef.current;
+        const sec = Math.floor((Date.now() - cur.levelStartAt) / 1000);
+        if (sec === lastSec) return; // 同一秒，不重复触发
+        lastSec = sec;
         dispatch({ type: 'CHECK_LEVEL_UP' });
         // 警告：仅本级剩余 <= warningSeconds 时响
-        const cur = stateRef.current;
         const lvl = cur.levels[cur.currentLevelIndex];
         const levelDuration = (lvl?.duration || 0) * 60;
-        const levelUsed = cur.levelStartAt ? Math.floor((Date.now() - cur.levelStartAt) / 1000) : 0;
-        const levelRemaining = levelDuration - levelUsed;
+        const levelRemaining = levelDuration - sec;
         if (!cur.settings.isMuted && levelRemaining > 0 && levelRemaining <= cur.settings.warningSeconds) {
           playWarningBeep();
         }
-      }, 1000);
+      }, 100);
       return () => clearInterval(id);
     }
   }, [state.isRunning, isAdmin]);
