@@ -183,29 +183,6 @@ const AdminPage: React.FC = () => {
           <button onClick={() => setShowConfig(s => !s)} className="py-3 bg-white/5 hover:bg-white/10 border border-white/20 rounded-lg">⚙ 盲注结构</button>
         </div>
 
-        {/* 可编辑的赛事信息（实时同步到投屏页） */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-3">
-          <h2 className="text-base font-semibold mb-2" style={{ color: '#c5a572' }}>赛事信息（实时同步投屏页）</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs text-gray-400">大标题（中央顶部）</label>
-              <input className="w-full mt-1 px-3 py-2 bg-black/40 border border-white/20 rounded text-center" value={settings.eventTitle || ''} onChange={e => updateSettings({ eventTitle: e.target.value })} />
-            </div>
-            <div>
-              <label className="text-xs text-gray-400">赛事名称</label>
-              <input className="w-full mt-1 px-3 py-2 bg-black/40 border border-white/20 rounded text-center" value={settings.tournamentName} onChange={e => updateSettings({ tournamentName: e.target.value })} />
-            </div>
-            <div>
-              <label className="text-xs text-gray-400">店铺名称</label>
-              <input className="w-full mt-1 px-3 py-2 bg-black/40 border border-white/20 rounded text-center" value={settings.clubName} onChange={e => updateSettings({ clubName: e.target.value })} />
-            </div>
-            <div>
-              <label className="text-xs text-gray-400">屏幕ID</label>
-              <input className="w-full mt-1 px-3 py-2 bg-black/40 border border-white/20 rounded text-center" value={settings.screenId || ''} onChange={e => updateSettings({ screenId: e.target.value })} />
-            </div>
-          </div>
-        </div>
-
         {/* 参赛人数 / 总记分牌 */}
         <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-3">
           <h2 className="text-base font-semibold mb-2" style={{ color: '#c5a572' }}>比赛数据</h2>
@@ -244,11 +221,14 @@ const AdminPage: React.FC = () => {
           </button>
         </div>
 
-        {/* 显示样式（参考图风格） */}
+        {/* 主屏倒计时数字设置（控制投屏页中央大数字） */}
         <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-3">
-          <h2 className="text-base font-semibold mb-2" style={{ color: '#c5a572' }}>显示样式（投屏页大屏）</h2>
           <div>
-            <label className="text-xs text-gray-400">大标题（中央顶部）</label>
+            <h2 className="text-base font-semibold" style={{ color: '#c5a572' }}>主屏倒计时数字设置</h2>
+            <p className="text-xs text-gray-500 mt-1">控制投屏页中央大数字（倒计时）的大小和颜色</p>
+          </div>
+          <div>
+            <label className="text-xs text-gray-400">大标题（投屏页顶部）</label>
             <input
               className="w-full mt-1 px-3 py-2 bg-black/40 border border-white/20 rounded text-center text-lg"
               value={settings.tournamentTitle || ''}
@@ -258,7 +238,7 @@ const AdminPage: React.FC = () => {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-gray-400">倒计时字号（80-360 px）</label>
+              <label className="text-xs text-gray-400">中央数字字号（80-360 px）</label>
               <input
                 className="w-full mt-1 px-3 py-2 bg-black/40 border border-white/20 rounded text-center"
                 type="number" min="80" max="360"
@@ -267,7 +247,7 @@ const AdminPage: React.FC = () => {
               />
             </div>
             <div>
-              <label className="text-xs text-gray-400">倒计时颜色</label>
+              <label className="text-xs text-gray-400">中央数字颜色</label>
               <div className="flex gap-2 mt-1">
                 <input
                   type="color"
@@ -281,6 +261,20 @@ const AdminPage: React.FC = () => {
                   onChange={e => updateSettings({ countdownColor: e.target.value })}
                 />
               </div>
+            </div>
+          </div>
+          {/* 实时预览 */}
+          <div className="mt-2 p-4 bg-black/40 border border-white/10 rounded-lg text-center">
+            <div className="text-xs text-gray-500 mb-1">预览</div>
+            <div
+              className="font-mono font-bold"
+              style={{
+                fontSize: `${Math.min(80, (settings.countdownFontSize || 220) / 3)}px`,
+                color: settings.countdownColor || '#fbbf24',
+                textShadow: `0 0 20px ${settings.countdownColor || '#fbbf24'}80`,
+              }}
+            >
+              10:00
             </div>
           </div>
         </div>
