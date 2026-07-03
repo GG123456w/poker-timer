@@ -13,9 +13,10 @@ const formatTime = (s: number): string => {
 const AdminPage: React.FC = () => {
   const { state, start, pause, reset, prev, skip, setLevels, updateSettings, getDerived } = useTimer();
   const { settings, levels, currentLevelIndex, isRunning } = state;
-  const { elapsedTime } = getDerived();
+  const { levelRemaining, levelUsed } = getDerived();
   const currentLevel = levels[currentLevelIndex];
   const nextLevel = levels[currentLevelIndex + 1];
+  const isWarning = levelRemaining > 0 && levelRemaining <= settings.warningSeconds;
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
   const [session] = useState(() => getSession());
@@ -163,11 +164,37 @@ const AdminPage: React.FC = () => {
       </div>
 
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        {/* 倒计时 + 状态 */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-center">
-          <div className="text-sm text-gray-400 mb-2">LEVEL {currentLevel?.level || 0} / {levels.length} · {currentLevel ? `${currentLevel.smallBlind}/${currentLevel.bigBlind}` : '--'}</div>
-          <div className="text-7xl font-bold font-mono tracking-wide">{formatTime(elapsedTime)}</div>
-          <div className="text-sm text-gray-400 mt-2">状态：{isRunning ? '⏱️ 计时中' : '⏸️ 已暂停'}</div>
+        {/* 倒计时 + 状态（与前台一致：本级别剩余时间） */}
+        <div
+          className="rounded-2xl p-6 text-center relative overflow-hidden"
+          style={{
+            background: 'rgba(15, 15, 15, 0.7)',
+            border: `1px solid ${isWarning ? 'rgba(239, 68, 68, 0.5)' : 'rgba(251, 191, 36, 0.3)'}`,
+            boxShadow: isWarning
+              ? '0 0 30px rgba(239, 68, 68, 0.3)'
+              : '0 0 30px rgba(251, 191, 36, 0.1)',
+          }}
+        >
+          <div className="text-sm text-gray-400 mb-2">
+            LEVEL {currentLevel?.level || 0} / {levels.length} ·{' '}
+            {currentLevel ? `${currentLevel.smallBlind}/${currentLevel.bigBlind}` : '--'}
+          </div>
+          <div
+            className="font-mono font-bold leading-none"
+            style={{
+              fontSize: 'clamp(5rem, 12vw, 9rem)',
+              color: isWarning ? '#ef4444' : (settings.countdownColor || '#fbbf24'),
+              textShadow: isWarning
+                ? '0 0 30px rgba(239, 68, 68, 0.6), 0 0 15px rgba(239, 68, 68, 0.4)'
+                : `0 0 30px ${settings.countdownColor || '#fbbf24'}80, 0 0 15px ${settings.countdownColor || '#fbbf24'}60`,
+              fontFamily: 'Consolas, Monaco, monospace',
+            }}
+          >
+            {formatTime(levelRemaining)}
+          </div>
+          <div className="text-sm text-gray-400 mt-2">
+            状态：{isRunning ? '⏱️ 计时中' : '⏸️ 已暂停'} · 本级用时 {formatTime(levelUsed)} / {currentLevel?.duration || 0}:00
+          </div>
         </div>
 
         {/* 主控制按钮 */}
